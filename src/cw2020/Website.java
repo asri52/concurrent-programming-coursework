@@ -18,10 +18,10 @@ public class Website extends Thread {
     private int numberContactsNotified;
     private boolean running;
     
-    private GUI theGUI;
-    private DayCounter day;
-    private Database database;
-    private LinkedList<Person> infected;
+    private final GUI theGUI; // TODO: data members can be marked final
+    private final DayCounter day;
+    private final Database database;
+    private final LinkedList<Person> infected; // TODO: use java.util.concurrent thread-safe collection instead or sync the entire Website interface that accesses it
     
     public Website(GUI gui){
         this.theGUI = gui;
@@ -62,7 +62,7 @@ public class Website extends Thread {
         infected.add(p);       
     }
     
-    public void registerPhone(Person p){
+    public void registerPhone(Person p){ // TODO: sync method
         if(database.isPhoneRegistered(p)){
             System.out.println("Phone " + p.getPhoneID() + " is already registered");
             return;

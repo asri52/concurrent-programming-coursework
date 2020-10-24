@@ -31,7 +31,7 @@ public class Person extends Thread implements Comparable<Person> {
     private int dayInfected;
    
     /* references to objects within program */
-    private static Random numberGenerator = new Random();
+    private static final Random numberGenerator = new Random(); // Thread safe since Java 7
     private Website theWebsite;
 
     /* data describing average behaviour of population */    
@@ -54,7 +54,7 @@ public class Person extends Thread implements Comparable<Person> {
         this.infected = positive;
         this.setDaemon(true);
         if(infected) {
-            numberInfected++;
+            numberInfected++; // TODO: nonatomic operation, synchronize
             if(registered) theWebsite.recordThatIsInfected(this); 
             decideWhetherToSelfIsolate();
         }       
@@ -98,7 +98,7 @@ public class Person extends Thread implements Comparable<Person> {
     /* Phone interactions with Website */
     public void register(Website w) {
         registered = true;
-        phonesRegistered++;
+        phonesRegistered++; // TODO: nonatomic operation, sync on static lock object
         this.theWebsite = w;
         theWebsite.registerPhone(this);
     }

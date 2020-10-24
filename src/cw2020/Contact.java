@@ -12,12 +12,12 @@ import java.time.LocalDateTime;
 public class Contact {
     private final Person phone;
     private final LocalDateTime start;
-    private long minutes;
+    private final long minutes;
 
     public Contact(Person phone) {
         this.phone = phone;
         this.start = LocalDateTime.now();
-        minutes = randomMinutes();
+        this.minutes = randomMinutes();
     }
 
     public Person getPhone() {
