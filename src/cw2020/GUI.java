@@ -5,6 +5,10 @@
  */
 package cw2020;
 
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import javax.swing.DefaultComboBoxModel;
 
 /** @author DAVID
@@ -24,11 +28,30 @@ public class GUI extends javax.swing.JFrame {
         initComponents();
         this.comboPopulation.setModel(new DefaultComboBoxModel(populationChoices));
         this.comboInitialInfected.setModel(new DefaultComboBoxModel(initialPercChoices));
+        
+        //setting up a periodic timer that updates the textTime in every second
+        int interval = 1000; //1 second
+        javax.swing.Timer timer = new javax.swing.Timer(interval,
+            new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                textTime.setText(getTime());
+            }
+        });
+        timer.start();
+    }
+    
+    //helper class that gets and formats current time
+        public String getTime() {
+        LocalDateTime now = LocalDateTime.now();
+        return now.format(DateTimeFormatter.ISO_DATE) + " "
+                + now.format(DateTimeFormatter.ofPattern("HH:mm:ss"));
     }
     
     public void updateData(){
         textContactsPerson.setText(""+Person.getContactCount());
-        textContactsPopulation.setText(""+thePopulation.getConnectionCount());
+        textContactsPopulation.setText(
+                ""+thePopulation.getConnectionCount());
         int t = Thread.activeCount();
         if (countMaxThreads < t) countMaxThreads = t;
         textThreadCount.setText(""+Thread.activeCount());       
