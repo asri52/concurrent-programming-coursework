@@ -9,7 +9,9 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import javax.swing.DefaultComboBoxModel;
+import javax.swing.SwingWorker;
 
 /** @author DAVID
  */
@@ -30,16 +32,42 @@ public class GUI extends javax.swing.JFrame {
         this.comboInitialInfected.setModel(new DefaultComboBoxModel(initialPercChoices));
         
         //setting up a periodic timer that updates the textTime in every second
-        int interval = 1000; //1 second
-        javax.swing.Timer timer = new javax.swing.Timer(interval,
-            new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                textTime.setText(getTime());
+        java.util.Timer updateTimeTimer = new java.util.Timer(true); 
+
+        java.util.TimerTask task = new java.util.TimerTask(){  
+            @Override public void run(){
+                java.awt.EventQueue.invokeLater(() -> {
+                    textTime.setText(getTime());
+                }); 
             }
-        });
-        timer.start();
+        };
+        updateTimeTimer.scheduleAtFixedRate(task, 0,1000); 
+        // schedules task on timer, with delay 0ms and interval 1000ms
+        
+        //setting up timer with lengthy task to update textDays
+        //TODO timer for swingworker
+        //TODO  Thread.activeCount() in doInBackground
+        //javax.swing.SwingWorker<Void, String> updateDaysWorker;
+        //updateDaysWorker = new javax.swing.SwingWorker() {
+//            @Override
+//            protected Void doInBackground() throws Exception {
+//                publish(String.valueOf(theWebsite.getTheDay()));
+//                return null;
+//            }
+//
+//            @Override
+//            protected void process(List<String> day) {
+//                textDays.setText(day.get(0));
+//            }
+//            
+//     
+//        };
+        
+        
     }
+    
+    
+    
     
     //helper class that gets and formats current time
         public String getTime() {
