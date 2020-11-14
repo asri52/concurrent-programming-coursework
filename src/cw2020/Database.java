@@ -7,7 +7,8 @@ package cw2020;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 /**
  * @author DAVID
  */
@@ -16,24 +17,44 @@ public class Database {
     private ArrayList<Person> registered;
     private HashMap<Person, ArrayList<Contact>> contactRecords;
     
+    private ReadWriteLock lock;
+    
     public Database(){
         registered = new ArrayList();
         contactRecords = new HashMap();
+        lock = new ReentrantReadWriteLock();
     }
     
     public void registerPhone(Person p){
-        if(!registered.contains(p)){
-            registered.add(p);
-            contactRecords.put(p, new ArrayList<>());
+        lock.writeLock().lock();
+        try {
+            if(!registered.contains(p)){
+                registered.add(p);
+                contactRecords.put(p, new ArrayList<>());
+            }
+        } finally {
+            lock.writeLock().unlock();
         }
     }
     
     public void recordContact(Person p , Contact c){
-        contactRecords.get(p).add(c);
+        lock.writeLock().lock();
+        try {
+            contactRecords.get(p).add(c);
+        } finally {
+            lock.writeLock().unlock();
+        }
     }
     
     public boolean isPhoneRegistered(Person p){
-        return registered.contains(p);
+        lock.readLock().lock();
+        boolean isRegistered;
+        try {
+            isRegistered = registered.contains(p);
+        } finally {
+            lock.readLock().unlock();
+        }
+        return isRegistered;
     }
     
     public String report(){
@@ -57,8 +78,12 @@ public class Database {
 
     public int getNumberContacts() {
         int total = 0;
-        for(Person p: registered) 
-            total += contactRecords.get(p).size();
+        lock.readLock().lock();
+        try {
+            total = registered.stream().map((p) -> contactRecords.get(p).size()).reduce(total, Integer::sum);
+        } finally {
+            lock.readLock().unlock();
+        }
         return total;
     }
     

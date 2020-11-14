@@ -16,8 +16,7 @@ import java.util.Random;
 /**
  * @author DAVID
  */
-public class Person extends Thread implements Comparable<Person> {
-
+public class Person extends Thread implements Comparable<Person> { // TODO: sync entire interface
     /* data describing Phone */
     private final String phoneID;
     private LinkedList<Contact> contacts;
@@ -55,7 +54,7 @@ public class Person extends Thread implements Comparable<Person> {
         this.setDaemon(true);
         if(infected) {
             numberInfected++; // TODO: nonatomic operation, synchronize
-            if(registered) theWebsite.recordThatIsInfected(this); 
+            if(registered) theWebsite.recordThatIsInfected(this); //TODO:több person, sync entire interface of website by marking methods as synchronized
             decideWhetherToSelfIsolate();
         }       
     }
@@ -68,8 +67,8 @@ public class Person extends Thread implements Comparable<Person> {
                 if(contacts.size() > 0) handleContact();
                 /* if infected has 14 days passed */
                 if(infected && theWebsite.getTheDay() > dayInfected + 14){
-                    infected = false; numberInfected--;
-                    recovered = true; numberRecovered++;
+                    infected = false; numberInfected--; // TODO: nonatomic operation, synchronize
+                    recovered = true; numberRecovered++; // TODO: nonatomic operation, synchronize
                 }
                 pause(40L); /* approx every hour in system time */
             }
@@ -108,7 +107,7 @@ public class Person extends Thread implements Comparable<Person> {
         contacts.add(aContact);
     }
     
-    public void handleContact() {
+    public void handleContact() { // todo sync
         Contact c = contacts.removeFirst();
         if(registered) theWebsite.recordContact(this, c);
         contactCount++;

@@ -32,9 +32,9 @@ public class Contact {
         return minutes;
     }
     
-    /* unused public void disconnected(){
+    public void disconnected(){
         start.plusMinutes(randomMinutes());
-    }*/
+    }
     
     public static long randomMinutes(){
         return (long)(Math.random()*30);
