@@ -7,7 +7,9 @@
 package cw2020;
 
 import java.util.ArrayList;
-import java.util.LinkedList;
+//original import for linkedlist
+//import java.util.LinkedList;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * @author DAVID
@@ -20,13 +22,13 @@ public class Website extends Thread {
     
     private final GUI theGUI; // TODO: data members can be marked final
     private final DayCounter day;
-    private final Database database;
-    private final LinkedList<Person> infected; // TODO: use java.util.concurrent thread-safe collection instead or sync the entire Website interface that accesses it
+    private final Database database; //interface of Database synced
+    private final ConcurrentLinkedQueue<Person> infected; // TODO: use java.util.concurrent thread-safe collection instead or sync the entire Website interface that accesses it
     
     public Website(GUI gui){
         this.theGUI = gui;
         this.database = new Database();
-        this.infected = new LinkedList();
+        this.infected = new ConcurrentLinkedQueue();
         this.setDaemon(true);
         this.day = new DayCounter(1000L); // set to run at 1 day per second
         day.start();
@@ -38,7 +40,10 @@ public class Website extends Thread {
             theGUI.updateData(); 
             
             if(infected.size() > 0){ /* loop that reads People from list of Infected, and informs their contacts */
-                Person p = infected.removeFirst();
+                
+                //poll() retvieves and removes head (first element) from this queue, 
+                //just like removeFirst() in LinkedList
+                Person p = infected.poll(); 
                 ArrayList<Contact> contacts = database.getContactRecords().get(p);
                 for(Contact c: contacts) {
                     Person p2 = c.getPhone();
@@ -59,7 +64,7 @@ public class Website extends Thread {
     }
     
     public void recordThatIsInfected(Person p){
-        infected.add(p);       
+        infected.add(p);       //inserts specified element at the end of this queue
     }
     
     public void registerPhone(Person p){ // TODO: sync method
