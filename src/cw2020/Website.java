@@ -10,20 +10,29 @@ import java.util.ArrayList;
 //original import for linkedlist
 //import java.util.LinkedList;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * @author DAVID
  */
 public class Website extends Thread {
-    private int numberSubscribed;
-    private int numberContactsRecorded;
-    private int numberContactsNotified;
-    private boolean running;
+    //volatile keyword to avoid memory inconsistencies
+    private volatile int numberSubscribed;
+    private Lock numberSubscribedLock;
     
-    private final GUI theGUI; // TODO: data members can be marked final
+    private volatile int numberContactsRecorded;
+    private Lock numberContactsRecordedLock;
+    
+    private volatile int numberContactsNotified;
+    
+    
+    private volatile boolean running;
+    
+    private final GUI theGUI;
     private final DayCounter day;
     private final Database database; //interface of Database synced
-    private final ConcurrentLinkedQueue<Person> infected; // TODO: use java.util.concurrent thread-safe collection instead or sync the entire Website interface that accesses it
+    private final ConcurrentLinkedQueue<Person> infected; 
     
     public Website(GUI gui){
         this.theGUI = gui;
@@ -31,6 +40,11 @@ public class Website extends Thread {
         this.infected = new ConcurrentLinkedQueue();
         this.setDaemon(true);
         this.day = new DayCounter(1000L); // set to run at 1 day per second
+        
+        //locks are initialised
+        numberContactsRecordedLock = new ReentrantLock();
+        numberSubscribedLock = new ReentrantLock();
+        
         day.start();
     }
     
@@ -48,7 +62,9 @@ public class Website extends Thread {
                 for(Contact c: contacts) {
                     Person p2 = c.getPhone();
                     p2.notifiedAboutPositiveContact();
-                    numberContactsNotified++;
+                    
+                    //this is an atomic operation and is only within the Website thread context -> no reentrantlock is applied
+                    numberContactsNotified++;              
                 }        
             }
             pause(100L);           
@@ -59,7 +75,12 @@ public class Website extends Thread {
         if(!database.isPhoneRegistered(p)){
             registerPhone(p);
         }
+        
+        //gettin mutex lock of dedicated Lock object
+        numberContactsRecordedLock.lock();
         numberContactsRecorded++;
+        numberContactsRecordedLock.unlock();
+        
         database.recordContact(p, c);
     }
     
@@ -72,7 +93,12 @@ public class Website extends Thread {
             System.out.println("Phone " + p.getPhoneID() + " is already registered");
             return;
         }
+        
+        //protected with explicit lock object, reentrantlock from multiple Person threads
+        numberSubscribedLock.lock();
         numberSubscribed++;
+        numberSubscribedLock.unlock();
+        
         database.registerPhone(p);
     }
     
@@ -81,14 +107,20 @@ public class Website extends Thread {
     }
 
     public int getNumberSubscribed() {
+        
+        //read operation on int is atomic, no interweaving with increment operations in Person thread context
         return numberSubscribed;
     }
 
     public int getNumberContactsRecorded() {
+        
+        //read operation on int is atomic, no interweaving with increment operations in Person thread context        
         return numberContactsRecorded;
     }
     
     public int getNumberContactsNotified() {
+        
+        //reading boolean is atomic in java
         return numberContactsNotified;
     }
 
