@@ -41,9 +41,9 @@ public class Website extends Thread {
         this.setDaemon(true);
         this.day = new DayCounter(1000L); // set to run at 1 day per second
         
-        //locks are initialised
-        numberContactsRecordedLock = new ReentrantLock();
-        numberSubscribedLock = new ReentrantLock();
+        //locks are initialised (fair lock with true parameter)
+        numberContactsRecordedLock = new ReentrantLock(true);
+        numberSubscribedLock = new ReentrantLock(true);
         
         day.start();
     }
@@ -85,6 +85,8 @@ public class Website extends Thread {
     }
     
     public void recordThatIsInfected(Person p){
+        
+        //thread-safe collection is used, since multiple Person threads call this method
         infected.add(p);       //inserts specified element at the end of this queue
     }
     
@@ -125,6 +127,8 @@ public class Website extends Thread {
     }
 
     public Database getDatabase() {
+        
+        //whichever thread gets hold of the database reference, the db interface is thread-safe, see in Database.java
         return database;
     }
     
