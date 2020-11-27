@@ -12,7 +12,12 @@
 package cw2020;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author DAVID
@@ -20,11 +25,19 @@ import java.util.Random;
 public class Population extends Thread {
     private int populationSize;
     
+    //the number of may threads in the executor
+    private static final int NPERSONTHREADS = 5;
+    
   
     private ArrayList<Person> phones;
     private boolean active;
     private Website theWebsite;
     private static Random numberGenerator = new Random();
+    
+    //executorservice
+    ExecutorService executor;
+    //make use of cancellability but not return 
+    List<Future<?>> futures;
     
     private double fractionRegistering = 1.0;
     private double fractionInitiallyPositive = 0.0;
@@ -41,6 +54,10 @@ public class Population extends Thread {
         /* Estimate approx number of contacts per hour in population 
          * assume each person has 12 contacts per day */ 
         numberContactsPerHour = 10*populationSize/24;
+        
+        //initialising executorservice for person threads
+        executor = Executors.newFixedThreadPool(NPERSONTHREADS);
+        futures = new ArrayList<>();
     }
     
     @Override public void run(){
@@ -63,17 +80,33 @@ public class Population extends Thread {
             boolean toRegister = (Math.random() < fractionRegistering);
             boolean isInfected = (Math.random() < fractionInitiallyPositive);
             Person p = new Person(theWebsite, toRegister, isInfected);
+            
+            //not storing futures, only making use of cancellability
+            executor.submit(p);
             phones.add(p);
         }
         
-        for(Person p: phones){
-            p.start();
-        }
+//        phones.forEach((p) -> {
+//            p.start();
+//        });
     }
     
     public void shutdown(){
-        for(Person p: phones){
-            p.stop();
+//        phones.forEach((p) -> {
+//            p.stop();
+//        });
+        executor.shutdown();
+        //wait until all threads are finished.
+        try {
+            if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
+                // we have waited long enough just shut down all threads now
+                executor.shutdownNow();
+                System.out.println("I am not going to wait any longer");
+            }
+        } catch (InterruptedException ie) {
+            // don't wait any longer just shut down all threads now
+            executor.shutdownNow();
+            System.out.println("I am not going to wait any longer");
         }
     }
 
