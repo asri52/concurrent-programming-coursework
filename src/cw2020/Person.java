@@ -320,7 +320,7 @@ public class Person extends Thread implements Comparable<Person> {
     
     //getting the mutex lock of all separately dedicated locks
     public static void resetCounts(){
-        //TODO: synchronize on class?
+        
         try {
             contactCountLock.lock();
             phonesRegisteredLock.lock();

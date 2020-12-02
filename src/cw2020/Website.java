@@ -51,7 +51,8 @@ public class Website extends Thread {
     @Override public void run(){
         running = true;
         while(running){
-            theGUI.updateData(); 
+            //GUIupdates itself periodically instead
+            //theGUI.updateData(); 
             
             if(infected.size() > 0){ /* loop that reads People from list of Infected, and informs their contacts */
                 
