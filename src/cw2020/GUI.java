@@ -6,17 +6,12 @@
 package cw2020;
 
 import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import javax.swing.DefaultComboBoxModel;
-import javax.swing.SwingWorker;
 
 /** @author DAVID
  */
@@ -28,13 +23,14 @@ public class GUI extends javax.swing.JFrame {
     //executor services for website and population threads to shut down
     //executorservice
     ExecutorService executor;
-    //make use of cancellability but not return 
-    List<Future<?>> futures;
+    
+    javax.swing.Timer updatecurrentTime, updateGUI, updateDaysThreads;
     
     
     int countMaxThreads;
     Integer[] populationChoices = new Integer[]{400,10,20,50,100,200,500,1000,2000,5000,10000,20000,50000,100000,200000,500000,1000000};
     Double[] initialPercChoices = new Double[]{4.0,0.0,0.0001,0.001,0.01,0.1,0.2,0.5,1.0,2.0,5.0,10.0};
+    
     /**
      * Creates new form GUI
      */
@@ -44,34 +40,10 @@ public class GUI extends javax.swing.JFrame {
         this.comboInitialInfected.setModel(new DefaultComboBoxModel(initialPercChoices));
        
         //periodic update of current time in every second
-        javax.swing.Timer updatecurrentTime = new javax.swing.Timer(1000, (ActionEvent e) -> {
+        updatecurrentTime = new javax.swing.Timer(1000, (ActionEvent e) -> {
             textTime.setText(getTime());
         });
         updatecurrentTime.start();
-        
-        
-        // schedules task on timer, with delay 0ms and interval 1000ms
-        
-        //setting up timer with lengthy task to update textDays
-        //TODO timer for swingworker
-        //TODO  Thread.activeCount() in doInBackground
-        //javax.swing.SwingWorker<Void, String> updateDaysWorker;
-        //updateDaysWorker = new javax.swing.SwingWorker() {
-//            @Override
-//            protected Void doInBackground() throws Exception {
-//                publish(String.valueOf(theWebsite.getTheDay()));
-//                return null;
-//            }
-//
-//            @Override
-//            protected void process(List<String> day) {
-//                textDays.setText(day.get(0));
-//            }
-//            
-//     
-//        };
-        
-        
     }
     
     
@@ -85,22 +57,18 @@ public class GUI extends javax.swing.JFrame {
     }
     
     public void updateData(){
-        
-        
-                textContactsPerson.setText(""+Person.getContactCount());
-                textContactsPopulation.setText(
-                        ""+thePopulation.getConnectionCount());
-                int t = Thread.activeCount();
-                if (countMaxThreads < t) countMaxThreads = t;
-                textThreadCount.setText(""+Thread.activeCount());       
-                textContactsDatabase.setText(""+theWebsite.getNumberContactsRecorded());
-                textContactsWebsite.setText(""+theWebsite.getDatabase().getNumberContacts());
-                textDays.setText(theWebsite.getTheDay() + "");
-                textInfected.setText(""+ Person.getNumberInfected());
-                textIsolating.setText(""+ Person.getNumberIsolating());
-                textRecovered.setText(""+ Person.getNumberRecovered());
-         
-        
+        textContactsPerson.setText(""+Person.getContactCount());
+        textContactsPopulation.setText(
+                ""+thePopulation.getConnectionCount());
+        int t = Thread.activeCount();
+        if (countMaxThreads < t) countMaxThreads = t;
+        textThreadCount.setText(""+Thread.activeCount());       
+        textContactsDatabase.setText(""+theWebsite.getNumberContactsRecorded());
+        textContactsWebsite.setText(""+theWebsite.getDatabase().getNumberContacts());
+        textDays.setText(theWebsite.getTheDay() + "");
+        textInfected.setText(""+ Person.getNumberInfected());
+        textIsolating.setText(""+ Person.getNumberIsolating());
+        textRecovered.setText(""+ Person.getNumberRecovered());
     }
 
     /**
@@ -578,37 +546,38 @@ public class GUI extends javax.swing.JFrame {
     private void buttonStartActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_buttonStartActionPerformed
         countMaxThreads = 0;
         
-        //initialising executorservice for person threads
         executor = Executors.newFixedThreadPool(2);
-        futures = new ArrayList<>();
-       
+
         //not storing futures, only making use of cancellability
         theWebsite = new Website(this);
         executor.submit(theWebsite);
         
         int population = populationChoices[this.comboPopulation.getSelectedIndex()];
         thePopulation = new Population(population, theWebsite);
+                
         readParameters();
         thePopulation.populate();
         
         executor.submit(thePopulation);
         
         //periodic update of GUI, in every sec
-        javax.swing.Timer updateGUI = new javax.swing.Timer(1000, (ActionEvent e) -> {
+        updateGUI = new javax.swing.Timer(1000, (ActionEvent e) -> {
             updateData();
         });
         updateGUI.start();
         
         //periodically update days elapsed in every 0.1 sec
-        javax.swing.Timer updateDaysThreads = new javax.swing.Timer(100, (ActionEvent e) -> {
+        updateDaysThreads = new javax.swing.Timer(100, (ActionEvent e) -> {
+            System.out.println("s");
             textDays.setText(theWebsite.getTheDay() + "");
             textThreadCount.setText(""+Thread.activeCount()); 
-            
+
             //Population statistics updates in every 0.1 sec
+            textPopulation.setText("" + thePopulation.getPopulationSize());
             textInfected.setText(""+ Person.getNumberInfected());
             textIsolating.setText(""+ Person.getNumberIsolating());
             textRecovered.setText(""+ Person.getNumberRecovered());
-            
+
             //setting contacts counts in every 0.1 second
             textContactsPopulation.setText(String.valueOf(thePopulation.getConnectionCount()));
             textContactsWebsite.setText(String.valueOf(theWebsite.getNumberContactsRecorded()));
@@ -638,16 +607,15 @@ public class GUI extends javax.swing.JFrame {
     private void buttonStopActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_buttonStopActionPerformed
         //this method ensures all person threads are shut down with executorservice
         thePopulation.shutdown();
+        theWebsite.shutdown();
         //no time needed        
-        //pause(100L); //give time for Person threads to stop       
-        //thePopulation.stop();
-        //theWebsite.stop();
+        //pause(100L);       
         
         //shutting down website and population threads
         executor.shutdown();
         //wait until all threads are finished.
         try {
-            if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
+            if (!executor.awaitTermination(1000, TimeUnit.SECONDS)) {
                 // we have waited long enough just shut down all threads now
                 executor.shutdownNow();
                 System.out.println("I am not going to wait any longer");
@@ -657,6 +625,7 @@ public class GUI extends javax.swing.JFrame {
             executor.shutdownNow();
             System.out.println("I am not going to wait any longer");
         }
+        
         
     }//GEN-LAST:event_buttonStopActionPerformed
 

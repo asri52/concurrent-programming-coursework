@@ -10,6 +10,9 @@ import java.util.ArrayList;
 //original import for linkedlist
 //import java.util.LinkedList;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -31,6 +34,7 @@ public class Website extends Thread {
     
     private final GUI theGUI;
     private final DayCounter day;
+    private ExecutorService dayexecutor;
     private final Database database; //interface of Database synced
     private final ConcurrentLinkedQueue<Person> infected; 
     
@@ -45,7 +49,9 @@ public class Website extends Thread {
         numberContactsRecordedLock = new ReentrantLock(true);
         numberSubscribedLock = new ReentrantLock(true);
         
-        day.start();
+        dayexecutor = Executors.newFixedThreadPool(1);
+        
+        dayexecutor.submit(day);
     }
     
     @Override public void run(){
@@ -145,6 +151,23 @@ public class Website extends Thread {
     private void pause(long ms){ /* convenience method to keep main code tidier */
         try { Thread.sleep(ms);
         } catch (InterruptedException ex) { /* ignore */}
+    }
+    
+    public void shutdown(){
+//        
+        dayexecutor.shutdown();
+        //wait until all threads are finished.
+        try {
+            if (!dayexecutor.awaitTermination(60, TimeUnit.SECONDS)) {
+                // we have waited long enough just shut down all threads now
+                dayexecutor.shutdownNow();
+                System.out.println("I am not going to wait any longer");
+            }
+        } catch (InterruptedException ie) {
+            // don't wait any longer just shut down all threads now
+            dayexecutor.shutdownNow();
+            System.out.println("I am not going to wait any longer");
+        }
     }
     
 }

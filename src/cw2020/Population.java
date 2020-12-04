@@ -24,9 +24,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class Population extends Thread {
     private int populationSize;
-    
-    //the number of may threads in the executor
-    private static final int NPERSONTHREADS = 5;
+ 
     
   
     private ArrayList<Person> phones;
@@ -36,11 +34,11 @@ public class Population extends Thread {
     
     //executorservice
     ExecutorService executor;
-    //make use of cancellability but not return 
-    List<Future<?>> futures;
+    
     
     private double fractionRegistering = 1.0;
     private double fractionInitiallyPositive = 0.0;
+    //TODO:Reentrantlock
     private int connectionCount;
     private int numberContactsPerHour;
 
@@ -56,8 +54,8 @@ public class Population extends Thread {
         numberContactsPerHour = 10*populationSize/24;
         
         //initialising executorservice for person threads
-        executor = Executors.newFixedThreadPool(NPERSONTHREADS);
-        futures = new ArrayList<>();
+        executor = Executors.newFixedThreadPool(ps);
+     
     }
     
     @Override public void run(){
@@ -132,6 +130,10 @@ public class Population extends Thread {
 
     public void setPopulationSize(int populationSize) {
         this.populationSize = populationSize;
+    }
+    
+    public int getPopulationSize() {
+        return populationSize;
     }
 
     public int getConnectionCount() {

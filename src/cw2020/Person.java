@@ -41,29 +41,22 @@ public class Person extends Thread implements Comparable<Person> {
     
     /* class-level counts for checking thread-safe operation */
     private static volatile int contactCount = 0;
-    private static Lock contactCountLock;
+    private static Lock contactCountLock = new ReentrantLock(true);
     
     private static volatile int phonesRegistered = 0;
-    private static Lock phonesRegisteredLock;
+    private static Lock phonesRegisteredLock = new ReentrantLock(true);
     
     private static volatile int numberIsolating;
-    private static Lock numberIsolatingLock;
+    private static Lock numberIsolatingLock = new ReentrantLock(true);
     
     private static volatile int numberInfected;
-    private static Lock numberInfectedLock;
+    private static Lock numberInfectedLock = new ReentrantLock(true);
     
     private static volatile int numberRecovered;
-    private static Lock numberRecoveredLock;
+    private static Lock numberRecoveredLock = new ReentrantLock(true);
 
     
-    public Person(Website w, boolean reg, boolean positive) {
-        //initialising reentrantlocks
-        contactCountLock = new ReentrantLock(true);
-        phonesRegisteredLock = new ReentrantLock(true);
-        numberIsolatingLock = new ReentrantLock(true);
-        numberInfectedLock = new ReentrantLock(true);
-        numberRecoveredLock = new ReentrantLock(true);
-        
+    public Person(Website w, boolean reg, boolean positive) {        
         this.phoneID = generateRandomID();
         this.contacts = new LinkedList<>();
         this.theWebsite = w;
@@ -71,7 +64,6 @@ public class Person extends Thread implements Comparable<Person> {
         this.infected = positive;
         this.setDaemon(true);
         if(infected) {
-            
             
             try {
                 numberInfectedLock.lock();
@@ -245,18 +237,15 @@ public class Person extends Thread implements Comparable<Person> {
     }
 
     public static int getContactCount() {
-        int temp;
         try {
             contactCountLock.lock();
-            temp = contactCount;
+            return contactCount;
         } finally {
             contactCountLock.unlock();
         }
-        
-        return temp;
     }
 
-    public static int getNumberInfected() {
+    public static int getNumberInfected() { // TODO: temp nem kell
        int temp;
         
         try {
