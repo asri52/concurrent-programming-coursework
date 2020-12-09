@@ -6,12 +6,18 @@
 package cw2020;
 
 import java.awt.event.ActionEvent;
+import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.LinkedList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import javax.swing.DefaultComboBoxModel;
+import javax.swing.table.DefaultTableModel;
 
 /** @author DAVID
  */
@@ -31,6 +37,10 @@ public class GUI extends javax.swing.JFrame {
     Integer[] populationChoices = new Integer[]{400,10,20,50,100,200,500,1000,2000,5000,10000,20000,50000,100000,200000,500000,1000000};
     Double[] initialPercChoices = new Double[]{4.0,0.0,0.0001,0.001,0.01,0.1,0.2,0.5,1.0,2.0,5.0,10.0};
     
+    //the data for report button to fill table with
+    ArrayList<Person> registeredPeopleAtReport;
+    Object[][] reportedData;
+    
     /**
      * Creates new form GUI
      */
@@ -39,15 +49,9 @@ public class GUI extends javax.swing.JFrame {
         this.comboPopulation.setModel(new DefaultComboBoxModel(populationChoices));
         this.comboInitialInfected.setModel(new DefaultComboBoxModel(initialPercChoices));
        
-        //periodic update of current time in every second
-        updatecurrentTime = new javax.swing.Timer(1000, (ActionEvent e) -> {
-            textTime.setText(getTime());
-        });
-        updatecurrentTime.start();
+        
+        
     }
-    
-    
-    
     
     //helper class that gets and formats current time
         public String getTime() {
@@ -57,6 +61,8 @@ public class GUI extends javax.swing.JFrame {
     }
     
     public void updateData(){
+        
+        textPopulation.setText("" + thePopulation.getPopulationSize());
         textContactsPerson.setText(""+Person.getContactCount());
         textContactsPopulation.setText(
                 ""+thePopulation.getConnectionCount());
@@ -66,9 +72,8 @@ public class GUI extends javax.swing.JFrame {
         textContactsDatabase.setText(""+theWebsite.getNumberContactsRecorded());
         textContactsWebsite.setText(""+theWebsite.getDatabase().getNumberContacts());
         textDays.setText(theWebsite.getTheDay() + "");
-        textInfected.setText(""+ Person.getNumberInfected());
-        textIsolating.setText(""+ Person.getNumberIsolating());
-        textRecovered.setText(""+ Person.getNumberRecovered());
+        
+        
     }
 
     /**
@@ -157,6 +162,11 @@ public class GUI extends javax.swing.JFrame {
 
             public boolean isCellEditable(int rowIndex, int columnIndex) {
                 return canEdit [columnIndex];
+            }
+        });
+        tablePersonData.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                tablePersonDataMouseClicked(evt);
             }
         });
         jScrollPane2.setViewportView(tablePersonData);
@@ -560,31 +570,43 @@ public class GUI extends javax.swing.JFrame {
         
         executor.submit(thePopulation);
         
-        //periodic update of GUI, in every sec
-        updateGUI = new javax.swing.Timer(1000, (ActionEvent e) -> {
-            updateData();
-        });
-        updateGUI.start();
+        //this needs to be done once at every start
+        textPopulation.setText("" + thePopulation.getPopulationSize());
         
-        //periodically update days elapsed in every 0.1 sec
-        updateDaysThreads = new javax.swing.Timer(100, (ActionEvent e) -> {
-            System.out.println("s");
-            textDays.setText(theWebsite.getTheDay() + "");
-            textThreadCount.setText(""+Thread.activeCount()); 
+        
+        //Requirement1.1 periodic update of current time in every second
+        updatecurrentTime = new javax.swing.Timer(1000, (ActionEvent e) -> {            
+            //Requirement 1.1, periodically called by a swing.Timer
+            textTime.setText(getTime());
+        
+        });
+        updatecurrentTime.start();
+        
+        //periodically update in every 0.1 sec
+        updateGUI = new javax.swing.Timer(100, (ActionEvent e) -> {
+            //for testing that it runs in every 0.1 sec
+            SimpleDateFormat formatter= new SimpleDateFormat("yyyy-MM-dd 'at' HH:mm:ss:SSS");
+            Date date = new Date(System.currentTimeMillis());
+            System.out.println("update GUI runs, current time" + formatter.format(date));
+          
+            
+            //Requirement 1.2
+            textDays.setText(theWebsite.getTheDay() + "");   
+            int t = Thread.activeCount();
+            if (countMaxThreads < t) countMaxThreads = t;
+                textThreadCount.setText(""+Thread.activeCount()); 
 
-            //Population statistics updates in every 0.1 sec
-            textPopulation.setText("" + thePopulation.getPopulationSize());
+            //Requirement 3 Population statistics updates in every 0.1 sec
             textInfected.setText(""+ Person.getNumberInfected());
             textIsolating.setText(""+ Person.getNumberIsolating());
             textRecovered.setText(""+ Person.getNumberRecovered());
-
             //setting contacts counts in every 0.1 second
             textContactsPopulation.setText(String.valueOf(thePopulation.getConnectionCount()));
             textContactsWebsite.setText(String.valueOf(theWebsite.getNumberContactsRecorded()));
             textContactsPerson.setText(String.valueOf(Person.getContactCount()));
             textContactsDatabase.setText(String.valueOf(theWebsite.getDatabase().getNumberContacts()));
         });
-        updateDaysThreads.start();
+        updateGUI.start();
        
         pause(100L);
     }//GEN-LAST:event_buttonStartActionPerformed
@@ -599,17 +621,52 @@ public class GUI extends javax.swing.JFrame {
         System.out.println(" frac = " + frac + " self = " + self + " pos = " + pos);
     }
     
+    public void showData() {
+        
+        //if we didn't press stop yet, get the registeres people from population
+        if(registeredPeopleAtReport==null)
+            registeredPeopleAtReport = thePopulation.getPhones();
+        //show data on console
+        registeredPeopleAtReport.forEach(person->{System.out.println(person);});
+        //since original cannot be edited, create new model
+        DefaultTableModel tableModel = new DefaultTableModel();
+        String [] columnIdentifiers = new String [] {
+                "Phone ID", "Isolating", "Infected", "Recovered", "Number of Contacts"
+            };
+        tableModel.setColumnIdentifiers(columnIdentifiers);
+        //add rows
+        Object [] rowData = new Object [5];
+        for(int i = 0; i<registeredPeopleAtReport.size(); i++) {
+            rowData[0] = registeredPeopleAtReport.get(i).getPhoneID();
+            rowData[1] = registeredPeopleAtReport.get(i).isIsolating();
+            rowData[2] = registeredPeopleAtReport.get(i).isInfected();
+            rowData[3] =  registeredPeopleAtReport.get(i).isRecovered();
+            rowData[4] = registeredPeopleAtReport.get(i).getContacts().size();
+            tableModel.addRow(rowData);
+       }
+        tablePersonData.setModel(tableModel);
+    }
+    
     private void buttonReportActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_buttonReportActionPerformed
         //called from the EDT
         updateData();
+        //fills table model with data
+        showData();
     }//GEN-LAST:event_buttonReportActionPerformed
 
     private void buttonStopActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_buttonStopActionPerformed
-        //this method ensures all person threads are shut down with executorservice
+
+//TODO:getting data for report        
+
+//this method ensures all person threads are shut down with executorservice
         thePopulation.shutdown();
         theWebsite.shutdown();
         //no time needed        
-        //pause(100L);       
+        pause(100L);  
+        
+        //store the registered people for report
+        registeredPeopleAtReport = thePopulation.getPhones();
+       
         
         //shutting down website and population threads
         executor.shutdown();
@@ -628,6 +685,27 @@ public class GUI extends javax.swing.JFrame {
         
         
     }//GEN-LAST:event_buttonStopActionPerformed
+
+    private void tablePersonDataMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_tablePersonDataMouseClicked
+        DefaultTableModel tableModel = (DefaultTableModel) tablePersonData.getModel();
+        int selectedRowIndex = tablePersonData.getSelectedRow();
+        
+        //get contacts from person selected
+        Person selectedPerson = registeredPeopleAtReport.get(selectedRowIndex);
+        LinkedList<Contact> contacts = selectedPerson.getContacts();
+        
+        //populate combobox
+        int phoneIDsLength = contacts.size();
+        String [] phoneIDs = new String [phoneIDsLength];
+        for(int i = 0; i < contacts.size();i++) {
+            phoneIDs[i] = contacts.get(i).getPhone().getPhoneID();
+            //for test purposes
+            System.out.println(contacts.get(i).getPhone().getPhoneID());
+        }
+        DefaultComboBoxModel cm = new DefaultComboBoxModel(phoneIDs);
+        comboContacts.setModel(cm);
+        
+    }//GEN-LAST:event_tablePersonDataMouseClicked
 
        
     private void pause(long ms){ /* convenience method to keep main code tidier */
@@ -663,10 +741,8 @@ public class GUI extends javax.swing.JFrame {
         //</editor-fold>
 
         /* Create and display the form */
-        java.awt.EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                new GUI().setVisible(true);
-            }
+        java.awt.EventQueue.invokeLater(() -> {
+            new GUI().setVisible(true);
         });
     }
 

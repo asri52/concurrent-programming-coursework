@@ -13,8 +13,9 @@ package cw2020;
 
 import java.util.LinkedList;
 import java.util.Random;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.atomic.AtomicInteger;
+//import java.util.concurrent.locks.Lock;
+//import java.util.concurrent.locks.ReentrantLock;
 /**
  * @author DAVID
  */
@@ -40,20 +41,21 @@ public class Person extends Thread implements Comparable<Person> {
     public static volatile double probabilitySelfisolatesIfAlerted = 1.0;
     
     /* class-level counts for checking thread-safe operation */
-    private static volatile int contactCount = 0;
-    private static Lock contactCountLock = new ReentrantLock(true);
+    //Atomic ensures volatile and atomicity
+    private static AtomicInteger contactCount = new AtomicInteger(0);
+    //private static Lock contactCountLock = new ReentrantLock(true);
     
-    private static volatile int phonesRegistered = 0;
-    private static Lock phonesRegisteredLock = new ReentrantLock(true);
+    private static AtomicInteger phonesRegistered = new AtomicInteger(0);
+    //private static Lock phonesRegisteredLock = new ReentrantLock(true);
     
-    private static volatile int numberIsolating;
-    private static Lock numberIsolatingLock = new ReentrantLock(true);
+    private static AtomicInteger numberIsolating = new AtomicInteger(0);
+    //private static Lock numberIsolatingLock = new ReentrantLock(true);
     
-    private static volatile int numberInfected;
-    private static Lock numberInfectedLock = new ReentrantLock(true);
+    private static AtomicInteger numberInfected = new AtomicInteger(0);
+    //private static Lock numberInfectedLock = new ReentrantLock(true);
     
-    private static volatile int numberRecovered;
-    private static Lock numberRecoveredLock = new ReentrantLock(true);
+    private static AtomicInteger numberRecovered = new AtomicInteger(0);
+    //private static Lock numberRecoveredLock = new ReentrantLock(true);
 
     
     public Person(Website w, boolean reg, boolean positive) {        
@@ -65,12 +67,14 @@ public class Person extends Thread implements Comparable<Person> {
         this.setDaemon(true);
         if(infected) {
             
-            try {
-                numberInfectedLock.lock();
-                numberInfected++;
-            } finally {
-                numberInfectedLock.unlock();
-            }
+//            try {
+//                numberInfectedLock.lock();
+//                numberInfected++;
+//            } finally {
+//                numberInfectedLock.unlock();
+//            }
+          
+           numberInfected.addAndGet(1);
             
             //thread-safety ensured in Website interface
             if(registered) theWebsite.recordThatIsInfected(this);
@@ -88,21 +92,22 @@ public class Person extends Thread implements Comparable<Person> {
                 if(infected && theWebsite.getTheDay() > dayInfected + 14){
                     infected = false; 
            
-                    try {
-                        numberInfectedLock.lock();
-                        numberInfected--;
-                    } finally {
-                        numberInfectedLock.unlock();
-                    }
-                    
+//                    try {
+//                        numberInfectedLock.lock();
+//                        numberInfected--;
+//                    } finally {
+//                        numberInfectedLock.unlock();
+//                    }
+                    numberInfected.decrementAndGet();
                     recovered = true; 
               
-                    try {
-                        numberRecoveredLock.lock();
-                        numberRecovered++;
-                    } finally {
-                        numberRecoveredLock.unlock();
-                    }
+//                    try {
+//                        numberRecoveredLock.lock();
+//                        numberRecovered++;
+//                    } finally {
+//                        numberRecoveredLock.unlock();
+//                    }
+                    numberRecovered.addAndGet(1);
                 }
                 pause(40L); /* approx every hour in system time */
             }
@@ -111,12 +116,14 @@ public class Person extends Thread implements Comparable<Person> {
                 if(theWebsite.getTheDay() > dayStartedIsolation + 14){
                     isolating = false; 
                 
-                    try {
+                    /*try {
                         numberIsolatingLock.lock();
                         numberIsolating--;
                     } finally {
                         numberIsolatingLock.unlock();
                     }
+                    */
+                    numberIsolating.decrementAndGet();
                     
                 }
                 pause(40L); /* approx every hour in system time */
@@ -135,17 +142,28 @@ public class Person extends Thread implements Comparable<Person> {
     public void setInfected(){
         infected = true;
     }
+    
+    //added for report purposes
+    public boolean isRegistered(){
+        return registered;
+    }
+    
+    public boolean isRecovered() {
+        return recovered;
+    }
 
     /* Phone interactions with Website */
     public void register(Website w) {
         registered = true;
         
-        try {
+        /*try {
             phonesRegisteredLock.lock();
             phonesRegistered++;
         } finally {
             phonesRegisteredLock.unlock();
         }
+        */
+        phonesRegistered.addAndGet(1);
         
         this.theWebsite = w;
         theWebsite.registerPhone(this);
@@ -160,12 +178,14 @@ public class Person extends Thread implements Comparable<Person> {
         Contact c = contacts.removeFirst();
         if(registered) theWebsite.recordContact(this, c);
 
-        try {           
+        /*try {           
             contactCountLock.lock();
             contactCount++;
         } finally {
             contactCountLock.unlock();
         }
+        */
+        contactCount.addAndGet(1);
         
         if(recovered) return;
         if(!infected && c.getPhone().infected) chanceOfInfectionOnContact();
@@ -180,14 +200,13 @@ public class Person extends Thread implements Comparable<Person> {
         if(risk < probabilityInfectedIfInContact) {
             infected = true;
             
-            
-            try {
-                numberInfectedLock.lock();
-                numberInfected++;
-            } finally {
-                numberInfectedLock.unlock();
-            }
-            
+//            try {
+//                numberInfectedLock.lock();
+//                numberInfected++;
+//            } finally {
+//                numberInfectedLock.unlock();
+//            }
+            numberInfected.addAndGet(1);
             if(registered) theWebsite.recordThatIsInfected(this); 
             decideWhetherToSelfIsolate();
         }
@@ -198,12 +217,14 @@ public class Person extends Thread implements Comparable<Person> {
         if(decide < probabilitySelfisolatesIfAlerted) {
             isolating = true;
            
-            try {
+            /*try {
                 numberIsolatingLock.lock();
                 numberIsolating++;
             } finally {
                 numberIsolatingLock.unlock();
             }
+            */
+            numberIsolating.addAndGet(1);
             
             dayStartedIsolation = theWebsite.getTheDay();
         }
@@ -233,22 +254,26 @@ public class Person extends Thread implements Comparable<Person> {
         return phoneID + " has " + contacts.size() + " contacts,"
                 + " registered: " + registered
                 + " infected: " + infected
+                + " recovered: " + recovered
                 + " self-isolating: " + isolating;
     }
 
     public static int getContactCount() {
-        try {
+       /* try {
             contactCountLock.lock();
             return contactCount;
         } finally {
             contactCountLock.unlock();
         }
+        */
+       //returns the current value atomically
+       return contactCount.get();
     }
 
-    public static int getNumberInfected() { // TODO: temp nem kell
+    public static int getNumberInfected() {
        int temp;
         
-        try {
+        /*try {
             //reading of volatile data is atomic but a more predictable way to
             //ensure thread safety is to acquire the lock from the same object as
             //other operations on this data
@@ -257,13 +282,13 @@ public class Person extends Thread implements Comparable<Person> {
         } finally {
             numberInfectedLock.unlock();
         }
-        
-        return temp;
+       */
+        return numberInfected.getAcquire();
     }
 
     public static int getNumberRecovered() {
         
-        int temp;
+        /*int temp;
         try {
             numberRecoveredLock.lock();
             temp = numberRecovered;
@@ -272,19 +297,21 @@ public class Person extends Thread implements Comparable<Person> {
         }
         
         return temp;
+        */
+        return numberRecovered.getAcquire();
     }
 
     public static int getNumberIsolating() {
         
-        int temp;
+        /*int temp;
         try {
             numberIsolatingLock.lock();
             temp = numberIsolating;
         } finally {
             numberIsolatingLock.unlock();
         }
-        
-        return temp;
+        */
+      return numberIsolating.getAcquire();
     }
        
     public int compareTo(Person otherPhone) {
@@ -310,7 +337,7 @@ public class Person extends Thread implements Comparable<Person> {
     //getting the mutex lock of all separately dedicated locks
     public static void resetCounts(){
         
-        try {
+       /* try {
             contactCountLock.lock();
             phonesRegisteredLock.lock();
             numberIsolatingLock.lock();
@@ -329,12 +356,18 @@ public class Person extends Thread implements Comparable<Person> {
             numberInfectedLock.unlock();
             numberRecoveredLock.unlock();
         }
+        */
+        contactCount.set(0);
+        phonesRegistered.set(0);
+        numberIsolating.set(0);
+        numberInfected.set(0);
+        numberRecovered.set(0);
         
     }
     
     
     public static String report(){
-        int cc;
+        /*int cc;
         int pr;
         
         try {
@@ -346,9 +379,10 @@ public class Person extends Thread implements Comparable<Person> {
             contactCountLock.unlock();
             phonesRegisteredLock.unlock();
         }
+        */
         
-        return cc + " contacts counted in run of Phone\n"
-                + pr + " Phones tried to register\n"
+        return contactCount.getAcquire() + " contacts counted in run of Phone\n"
+                + phonesRegistered.getAcquire() + " Phones tried to register\n"
         
 
     + probabilityInfectedIfInContact*100 + "% chance of infection per contact\n"
