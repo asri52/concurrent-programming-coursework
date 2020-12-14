@@ -10,7 +10,6 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.concurrent.ExecutorService;
@@ -25,18 +24,16 @@ public class GUI extends javax.swing.JFrame {
 
     Website theWebsite;
     Population thePopulation;
-
-    //executor services for website and population threads to shut down
-    //executorservice
-    ExecutorService executor;
-    
-    javax.swing.Timer updatecurrentTime, updateGUI, updateDaysThreads;
-    
-    
     int countMaxThreads;
     Integer[] populationChoices = new Integer[]{400,10,20,50,100,200,500,1000,2000,5000,10000,20000,50000,100000,200000,500000,1000000};
     Double[] initialPercChoices = new Double[]{4.0,0.0,0.0001,0.001,0.01,0.1,0.2,0.5,1.0,2.0,5.0,10.0};
     
+    
+    //executor services for website and population threads to shut down
+    //executorservice
+    ExecutorService executor; 
+    //Timers
+    javax.swing.Timer updatecurrentTime, updateGUI, updateDaysThreads;
     //the data for report button to fill table with
     ArrayList<Person> registeredPeopleAtReport;
     Object[][] reportedData;
@@ -47,21 +44,17 @@ public class GUI extends javax.swing.JFrame {
     public GUI() {
         initComponents();
         this.comboPopulation.setModel(new DefaultComboBoxModel(populationChoices));
-        this.comboInitialInfected.setModel(new DefaultComboBoxModel(initialPercChoices));
-       
-        
-        
+        this.comboInitialInfected.setModel(new DefaultComboBoxModel(initialPercChoices));      
     }
     
     //helper class that gets and formats current time
-        public String getTime() {
+    public String getTime() {
         LocalDateTime now = LocalDateTime.now();
         return now.format(DateTimeFormatter.ISO_DATE) + " "
                 + now.format(DateTimeFormatter.ofPattern("HH:mm:ss"));
     }
     
     public void updateData(){
-        
         textPopulation.setText("" + thePopulation.getPopulationSize());
         textContactsPerson.setText(""+Person.getContactCount());
         textContactsPopulation.setText(
@@ -71,9 +64,7 @@ public class GUI extends javax.swing.JFrame {
         textThreadCount.setText(""+Thread.activeCount());       
         textContactsDatabase.setText(""+theWebsite.getNumberContactsRecorded());
         textContactsWebsite.setText(""+theWebsite.getDatabase().getNumberContacts());
-        textDays.setText(theWebsite.getTheDay() + "");
-        
-        
+        textDays.setText(theWebsite.getTheDay() + "");    
     }
 
     /**
@@ -554,26 +545,18 @@ public class GUI extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void buttonStartActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_buttonStartActionPerformed
-        countMaxThreads = 0;
-        
+        countMaxThreads = 0;  
         executor = Executors.newFixedThreadPool(2);
-
         //not storing futures, only making use of cancellability
         theWebsite = new Website(this);
         executor.submit(theWebsite);
-        
         int population = populationChoices[this.comboPopulation.getSelectedIndex()];
         thePopulation = new Population(population, theWebsite);
-                
         readParameters();
         thePopulation.populate();
-        
         executor.submit(thePopulation);
-        
         //this needs to be done once at every start
         textPopulation.setText("" + thePopulation.getPopulationSize());
-        
-        
         //Requirement1.1 periodic update of current time in every second
         updatecurrentTime = new javax.swing.Timer(1000, (ActionEvent e) -> {            
             //Requirement 1.1, periodically called by a swing.Timer
@@ -581,21 +564,17 @@ public class GUI extends javax.swing.JFrame {
         
         });
         updatecurrentTime.start();
-        
         //periodically update in every 0.1 sec
         updateGUI = new javax.swing.Timer(100, (ActionEvent e) -> {
             //for testing that it runs in every 0.1 sec
             SimpleDateFormat formatter= new SimpleDateFormat("yyyy-MM-dd 'at' HH:mm:ss:SSS");
             Date date = new Date(System.currentTimeMillis());
             System.out.println("update GUI runs, current time" + formatter.format(date));
-          
-            
             //Requirement 1.2
             textDays.setText(theWebsite.getTheDay() + "");   
             int t = Thread.activeCount();
             if (countMaxThreads < t) countMaxThreads = t;
                 textThreadCount.setText(""+Thread.activeCount()); 
-
             //Requirement 3 Population statistics updates in every 0.1 sec
             textInfected.setText(""+ Person.getNumberInfected());
             textIsolating.setText(""+ Person.getNumberIsolating());
@@ -607,7 +586,6 @@ public class GUI extends javax.swing.JFrame {
             textContactsDatabase.setText(String.valueOf(theWebsite.getDatabase().getNumberContacts()));
         });
         updateGUI.start();
-       
         pause(100L);
     }//GEN-LAST:event_buttonStartActionPerformed
 
@@ -622,7 +600,6 @@ public class GUI extends javax.swing.JFrame {
     }
     
     public void showData() {
-        
         //if we didn't press stop yet, get the registeres people from population
         if(registeredPeopleAtReport==null)
             registeredPeopleAtReport = thePopulation.getPhones();
@@ -655,19 +632,14 @@ public class GUI extends javax.swing.JFrame {
     }//GEN-LAST:event_buttonReportActionPerformed
 
     private void buttonStopActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_buttonStopActionPerformed
-
-//TODO:getting data for report        
-
+     
 //this method ensures all person threads are shut down with executorservice
         thePopulation.shutdown();
         theWebsite.shutdown();
         //no time needed        
         pause(100L);  
-        
         //store the registered people for report
-        registeredPeopleAtReport = thePopulation.getPhones();
-       
-        
+        registeredPeopleAtReport = thePopulation.getPhones();   
         //shutting down website and population threads
         executor.shutdown();
         //wait until all threads are finished.
@@ -682,7 +654,6 @@ public class GUI extends javax.swing.JFrame {
             executor.shutdownNow();
             System.out.println("I am not going to wait any longer");
         }
-        
         
     }//GEN-LAST:event_buttonStopActionPerformed
 
