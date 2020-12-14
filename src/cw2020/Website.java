@@ -13,6 +13,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -20,6 +21,69 @@ import java.util.concurrent.locks.ReentrantLock;
  * @author DAVID
  */
 public class Website extends Thread {
+    
+    //Queue management - Procuder-Consumer Pattern
+    public class QueueManager {
+    private Lock lock;
+    private Condition bufferNotEmpty;
+    private Condition bufferNotFull;
+    
+    private int[] buffer;
+    private int bufferSize, in, out, numOfItems;
+
+    public QueueManager(int size) {
+        lock = new ReentrantLock(); // initialise the lock
+/* initialise 2 condition variables associated with lock */
+        bufferNotEmpty = lock.newCondition();
+        bufferNotFull = lock.newCondition();
+        /* initialise buffer data*/
+        bufferSize = size;
+        in = 0;
+        out = 0;
+        numOfItems = 0;
+        buffer = new int[bufferSize];
+    
+    }
+        public void add(int x) {
+            try {
+                lock.lock();
+                while (numOfItems == bufferSize) {
+                    try {
+                        bufferNotFull.await();
+                    } catch (InterruptedException e) {
+                    }
+                }
+                buffer[in] = x;
+                in = (in + 1) % bufferSize;
+                numOfItems++;
+                bufferNotEmpty.signal();
+            } finally {
+                lock.unlock();
+            }
+        }
+        
+        public int remove() {
+            try {
+                lock.lock();
+                while (numOfItems == 0) {
+                    try {
+                        bufferNotEmpty.await();
+                    } catch (InterruptedException e) {
+                    }
+                }
+                int x = buffer[out];
+                out = (out + 1) % bufferSize;
+                numOfItems--;
+                bufferNotFull.signal();
+                return x;
+            } finally {
+                lock.unlock();
+            }
+        }
+
+    }
+    
+    private QueueManager queueManager = new QueueManager(5);
     //volatile keyword to avoid memory inconsistencies
     private volatile int numberSubscribed;
     private Lock numberSubscribedLock;
@@ -65,7 +129,7 @@ public class Website extends Thread {
                 //poll() retvieves and removes head (first element) from this queue, 
                 //just like removeFirst() in LinkedList
                 Person p = infected.poll(); 
-                ArrayList<Contact> contacts = database.getContactRecords().get(p);
+                ArrayList<Contact> contacts = database.getContactRecords().get(p);               
                 for(Contact c: contacts) {
                     Person p2 = c.getPhone();
                     p2.notifiedAboutPositiveContact();
@@ -79,6 +143,8 @@ public class Website extends Thread {
     }
     
     public void recordContact(Person p, Contact c){
+        queueManager.add(1);
+        
         if(!database.isPhoneRegistered(p)){
             registerPhone(p);
         }
@@ -89,15 +155,22 @@ public class Website extends Thread {
         numberContactsRecordedLock.unlock();
         
         database.recordContact(p, c);
+        
+        queueManager.remove();
     }
     
     public void recordThatIsInfected(Person p){
+        queueManager.add(1);
         
         //thread-safe collection is used, since multiple Person threads call this method
         infected.add(p);       //inserts specified element at the end of this queue
+        
+        queueManager.remove();
     }
     
-    public void registerPhone(Person p){ // TODO: sync method
+    public void registerPhone(Person p){ 
+        queueManager.add(1);
+        
         if(database.isPhoneRegistered(p)){
             System.out.println("Phone " + p.getPhoneID() + " is already registered");
             return;
@@ -109,6 +182,8 @@ public class Website extends Thread {
         numberSubscribedLock.unlock();
         
         database.registerPhone(p);
+        
+        queueManager.remove();
     }
     
     public int getTheDay(){
